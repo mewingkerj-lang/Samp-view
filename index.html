@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SA-MP Server Status Viewer</title>
+
+<style>
+body {
+  background: #0f172a;
+  color: white;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding: 40px;
+}
+
+h1 {
+  margin-bottom: 30px;
+}
+
+input {
+  padding: 12px;
+  width: 250px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+}
+
+button {
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: #3b82f6;
+  color: white;
+  font-weight: bold;
+}
+
+button:hover {
+  background: #2563eb;
+}
+
+.card {
+  margin-top: 30px;
+  background: #1e293b;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: left;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.online { color: #22c55e; }
+.offline { color: #ef4444; }
+
+.player-list {
+  margin-top: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #0f172a;
+  padding: 10px;
+  border-radius: 8px;
+}
+</style>
+</head>
+<body>
+
+<h1>🎮 SA-MP Server Status</h1>
+
+<input type="text" id="serverInput" placeholder="Contoh: 82.25.36.26:7777">
+<button onclick="checkServer()">Check</button>
+
+<div id="result"></div>
+
+<script>
+async function checkServer() {
+  const input = document.getElementById("serverInput").value;
+  const resultDiv = document.getElementById("result");
+
+  if (!input.includes(":")) {
+    resultDiv.innerHTML = "<p style='color:red'>Format salah! Gunakan ip:port</p>";
+    return;
+  }
+
+  const [ip, port] = input.split(":");
+
+  resultDiv.innerHTML = "⏳ Mengecek server...";
+
+  try {
+    // PUBLIC GAMEDIG API (proxy)
+    const response = await fetch(
+      `https://api.mcsrvstat.us/3/${ip}:${port}`
+    );
+
+    const data = await response.json();
+
+    if (!data.online) {
+      resultDiv.innerHTML = `
+        <div class="card">
+          <h2 class="offline">🔴 SERVER OFFLINE</h2>
+          <p>${ip}:${port}</p>
+        </div>
+      `;
+      return;
+    }
+
+    let playersHTML = "Tidak ada player";
+
+    if (data.players && data.players.list) {
+      playersHTML = data.players.list
+        .map(p => `• ${p.name}`)
+        .join("<br>");
+    }
+
+    resultDiv.innerHTML = `
+      <div class="card">
+        <h2 class="online">🟢 SERVER ONLINE</h2>
+        <p><b>IP:</b> ${ip}:${port}</p>
+        <p><b>Hostname:</b> ${data.hostname || "-"}</p>
+        <p><b>Players:</b> ${data.players?.online || 0}/${data.players?.max || 0}</p>
+        <p><b>Version:</b> ${data.version || "-"}</p>
+
+        <div class="player-list">
+          ${playersHTML}
+        </div>
+      </div>
+    `;
+
+  } catch (err) {
+    resultDiv.innerHTML = `
+      <div class="card">
+        <h2 class="offline">🔴 ERROR</h2>
+        <p>Tidak dapat mengambil data server.</p>
+      </div>
+    `;
+  }
+}
+</script>
+
+</body>
+</html>
